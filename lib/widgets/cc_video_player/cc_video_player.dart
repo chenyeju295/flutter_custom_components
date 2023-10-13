@@ -13,35 +13,9 @@ class CCVideoPlayer extends StatefulWidget {
 }
 
 class _CCVideoPlayerState extends State<CCVideoPlayer> {
-  double videoWidth(VideoPlayerController? controller) {
-    double width = controller != null
-        ? controller.value.size.width != 0
-            ? controller.value.size.width
-            : 640
-        : 640;
-    return width;
-  }
-
-  double videoHeight(VideoPlayerController? controller) {
-    double height = controller != null
-        ? controller.value.size.height != 0
-            ? controller.value.size.height
-            : 480
-        : 480;
-    return height;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (BuildContext context) => CCVideoPlayerController(),
-      builder: (context, child) => _buildPage(context),
-    );
-  }
-
-  Widget _buildPage(BuildContext context) {
     final _ = widget.controller;
-
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: Container(
@@ -51,14 +25,16 @@ class _CCVideoPlayerState extends State<CCVideoPlayer> {
             child: FittedBox(
               clipBehavior: Clip.hardEdge,
               child: SizedBox(
-                  width: videoWidth(_.videoPlayerController),
-                  height: videoHeight(_.videoPlayerController),
+                  width: _.videoWidth(_.videoPlayerController),
+                  height: _.videoHeight(_.videoPlayerController),
                   child: _.videoPlayerController != null ? VideoPlayer(_.videoPlayerController!) : Container()),
             ),
           ),
           Positioned.fill(child: GestureDetector(
             onTap: () {
               _.togglePlay();
+              print(_.playerStatus.status);
+              print(_.videoPlayerController?.value.isPlaying);
             },
           ))
         ]),

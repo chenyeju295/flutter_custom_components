@@ -3,7 +3,7 @@ import 'package:video_player/video_player.dart';
 
 import 'package:flutter/widgets.dart';
 
-class CCVideoPlayerController extends ChangeNotifier {
+class CCVideoPlayerController {
   VideoPlayerController? _videoPlayerController;
 
   VideoPlayerController? get videoPlayerController => _videoPlayerController;
@@ -32,6 +32,7 @@ class CCVideoPlayerController extends ChangeNotifier {
         });
       }
       dataStatus.status = DataStatus.loaded;
+      _videoPlayerController!.addListener(_listener);
     } catch (e) {
       dataStatus.status = DataStatus.error;
     }
@@ -56,9 +57,13 @@ class CCVideoPlayerController extends ChangeNotifier {
     return tmp;
   }
 
+  void _listener() {
+    final value = _videoPlayerController!.value;
+    playerStatus.status = value.isPlaying ? PlayerStatus.playing : PlayerStatus.stopped;
+  }
+
   Future<void> play({bool repeat = false, bool hideControls = true}) async {
     await _videoPlayerController?.play();
-
     playerStatus.status = PlayerStatus.playing;
   }
 
@@ -68,11 +73,29 @@ class CCVideoPlayerController extends ChangeNotifier {
   }
 
   Future<void> togglePlay() async {
-    if (playerStatus.playing) {
+    if (_videoPlayerController!.value.isPlaying) {
       pause();
     } else {
       play();
     }
+  }
+
+  double videoWidth(VideoPlayerController? controller) {
+    double width = controller != null
+        ? controller.value.size.width != 0
+            ? controller.value.size.width
+            : 640
+        : 640;
+    return width;
+  }
+
+  double videoHeight(VideoPlayerController? controller) {
+    double height = controller != null
+        ? controller.value.size.height != 0
+            ? controller.value.size.height
+            : 480
+        : 480;
+    return height;
   }
 }
 
@@ -100,7 +123,7 @@ class PlayerDataStatus {
 enum PlayerStatus { stopped, completed, playing, paused }
 
 class VideoPlayerStatus {
-  PlayerStatus status = PlayerStatus.paused;
+  PlayerStatus status = PlayerStatus.stopped;
 
   bool get stopped {
     return status == PlayerStatus.stopped;
