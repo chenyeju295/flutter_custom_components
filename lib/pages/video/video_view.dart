@@ -57,15 +57,15 @@ class _VideoPageState extends State<VideoPage> {
               CCVideoPlayer(
                 controller: videoControllerList[0],
               ),
-              CCVideoPlayer(
-                controller: videoControllerList[1],
-              ),
-              CCVideoPlayer(
-                controller: videoControllerList[2],
-              ),
-              CCVideoPlayer(
-                controller: videoControllerList[3],
-              ),
+              // CCVideoPlayer(
+              //   controller: videoControllerList[1],
+              // ),
+              // CCVideoPlayer(
+              //   controller: videoControllerList[2],
+              // ),
+              // CCVideoPlayer(
+              //   controller: videoControllerList[3],
+              // ),
             ],
           ),
         ),

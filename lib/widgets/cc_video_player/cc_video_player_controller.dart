@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_custom_components/widgets/cc_video_player/cc_video_player.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:flutter/widgets.dart';
@@ -6,6 +7,16 @@ import 'package:flutter/widgets.dart';
 class CCVideoPlayerController {
   VideoPlayerController? _videoPlayerController;
 
+  Duration _position = Duration.zero;
+  Duration _sliderPosition = Duration.zero;
+  Duration _duration = Duration.zero;
+  final bool _mute = false;
+  double _volumeBeforeMute = 0;
+
+  Duration get position => _position;
+  Duration get sliderPosition => _sliderPosition;
+  Duration get duration => _duration;
+  bool get mute => _mute;
   VideoPlayerController? get videoPlayerController => _videoPlayerController;
 
   final VideoPlayerStatus playerStatus = VideoPlayerStatus();
@@ -28,6 +39,7 @@ class CCVideoPlayerController {
       await _videoPlayerController!.initialize();
       if (oldController != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) async {
+          oldController.removeListener(_listener);
           await oldController.dispose();
         });
       }
@@ -59,7 +71,17 @@ class CCVideoPlayerController {
 
   void _listener() {
     final value = _videoPlayerController!.value;
-    playerStatus.status = value.isPlaying ? PlayerStatus.playing : PlayerStatus.stopped;
+    _duration = value.duration;
+    final position = value.position;
+    _position = position;
+    _sliderPosition = position;
+    final volume = value.volume;
+    if (!mute && _volumeBeforeMute != volume) {
+      _volumeBeforeMute = volume;
+    }
+    if ((_position.inSeconds >= duration.inSeconds) && !playerStatus.completed) {
+      playerStatus.status = PlayerStatus.completed;
+    }
   }
 
   Future<void> play({bool repeat = false, bool hideControls = true}) async {
@@ -80,6 +102,19 @@ class CCVideoPlayerController {
     }
   }
 
+  Future<void> seekTo(Duration position) async {
+    if (position >= duration) {
+      position = duration - const Duration(milliseconds: 100);
+    }
+    if (position < Duration.zero) {
+      position = Duration.zero;
+    }
+    _position = position;
+    if (duration.inSeconds != 0) {
+      await _videoPlayerController?.seekTo(position);
+    }
+  }
+
   double videoWidth(VideoPlayerController? controller) {
     double width = controller != null
         ? controller.value.size.width != 0
@@ -96,6 +131,10 @@ class CCVideoPlayerController {
             : 480
         : 480;
     return height;
+  }
+
+  static CCVideoPlayerController of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<CCVideoPlayerProvider>()!.controller;
   }
 }
 
