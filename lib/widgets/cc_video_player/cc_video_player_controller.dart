@@ -1,22 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_custom_components/widgets/cc_video_player/cc_video_player.dart';
 import 'package:flutter_custom_components/widgets/cc_video_player/model/player_model.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:flutter/widgets.dart';
 
-class CCVideoPlayerController {
+class CCVideoPlayerController extends ChangeNotifier {
   VideoPlayerController? _videoPlayerController;
 
-  Duration _position = Duration.zero;
-  Duration _sliderPosition = Duration.zero;
-  Duration _duration = Duration.zero;
+  Duration position = Duration.zero;
+  Duration sliderPosition = Duration.zero;
+  Duration duration = Duration.zero;
   final bool _mute = false;
   double _volumeBeforeMute = 0;
 
-  Duration get position => _position;
-  Duration get sliderPosition => _sliderPosition;
-  Duration get duration => _duration;
   bool get mute => _mute;
   VideoPlayerController? get videoPlayerController => _videoPlayerController;
 
@@ -49,6 +45,7 @@ class CCVideoPlayerController {
     } catch (e) {
       dataStatus.status = DataStatus.error;
     }
+    notifyListeners();
   }
 
   VideoPlayerController _createVideoController(DataSource dataSource) {
@@ -72,69 +69,46 @@ class CCVideoPlayerController {
 
   void _listener() {
     final value = _videoPlayerController!.value;
-    _duration = value.duration;
-    final position = value.position;
-    _position = position;
-    _sliderPosition = position;
+    playerStatus.status = value.isPlaying ? PlayerStatus.playing : PlayerStatus.paused;
+    duration = value.duration;
+    position = value.position;
+    sliderPosition = position;
     final volume = value.volume;
     if (!mute && _volumeBeforeMute != volume) {
       _volumeBeforeMute = volume;
     }
-    if ((_position.inSeconds >= duration.inSeconds) && !playerStatus.completed) {
+    if ((position.inSeconds >= duration.inSeconds) && !playerStatus.completed) {
       playerStatus.status = PlayerStatus.completed;
     }
+    notifyListeners();
   }
 
   Future<void> play({bool repeat = false, bool hideControls = true}) async {
     await _videoPlayerController?.play();
-    playerStatus.status = PlayerStatus.playing;
   }
 
   Future<void> pause({bool notify = true}) async {
     await _videoPlayerController?.pause();
-    playerStatus.status = PlayerStatus.paused;
   }
 
   Future<void> togglePlay() async {
-    if (_videoPlayerController!.value.isPlaying) {
+    if (playerStatus.playing) {
       pause();
     } else {
       play();
     }
   }
 
-  Future<void> seekTo(Duration position) async {
-    if (position >= duration) {
-      position = duration - const Duration(milliseconds: 100);
+  Future<void> seekTo(Duration seekPosition) async {
+    if (seekPosition >= duration) {
+      seekPosition = duration - const Duration(milliseconds: 100);
     }
-    if (position < Duration.zero) {
-      position = Duration.zero;
+    if (seekPosition < Duration.zero) {
+      seekPosition = Duration.zero;
     }
-    _position = position;
+    position = seekPosition;
     if (duration.inSeconds != 0) {
-      await _videoPlayerController?.seekTo(position);
+      await _videoPlayerController?.seekTo(seekPosition);
     }
-  }
-
-  double videoWidth(VideoPlayerController? controller) {
-    double width = controller != null
-        ? controller.value.size.width != 0
-            ? controller.value.size.width
-            : 640
-        : 640;
-    return width;
-  }
-
-  double videoHeight(VideoPlayerController? controller) {
-    double height = controller != null
-        ? controller.value.size.height != 0
-            ? controller.value.size.height
-            : 480
-        : 480;
-    return height;
-  }
-
-  static CCVideoPlayerController of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<CCVideoPlayerProvider>()!.controller;
   }
 }
