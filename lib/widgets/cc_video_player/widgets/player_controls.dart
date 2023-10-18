@@ -13,6 +13,15 @@ class _PlayerControlsState extends State<PlayerControls> {
   Widget build(BuildContext context) {
     final _ = CCVideoPlayerController.of(context);
     return Stack(children: [
+      if (_.playerStatus.stopped)
+        Center(
+          child: IconButton(
+              icon: const Icon(Icons.play_circle, color: Colors.white),
+              onPressed: () {
+                _.play();
+                setState(() {});
+              }),
+        ),
       Positioned(
         left: 0,
         right: 0,

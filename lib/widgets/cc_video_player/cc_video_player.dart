@@ -32,7 +32,7 @@ class _CCVideoPlayerState extends State<CCVideoPlayer> {
                     height: _.videoHeight(_.videoPlayerController),
                     child: _.videoPlayerController != null
                         ? VideoPlayer(key: _key, _.videoPlayerController!)
-                        : Container()),
+                        : GestureDetector(onTap: () => setState(() {}), child: const Center())),
               ),
             ),
             const Positioned.fill(child: PlayerControls())

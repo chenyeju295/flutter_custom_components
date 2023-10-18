@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_custom_components/widgets/cc_video_player/cc_video_player.dart';
+import 'package:flutter_custom_components/widgets/cc_video_player/model/player_model.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:flutter/widgets.dart';
@@ -135,48 +136,5 @@ class CCVideoPlayerController {
 
   static CCVideoPlayerController of(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<CCVideoPlayerProvider>()!.controller;
-  }
-}
-
-class DataSource {
-  DataSourceType type;
-  String? source, package;
-  DataSource({
-    this.source,
-    required this.type,
-    this.package,
-  }) : assert((type == DataSourceType.file) || source != null);
-}
-
-enum DataStatus { none, loading, loaded, error }
-
-class PlayerDataStatus {
-  DataStatus status = (DataStatus.none);
-
-  bool get none => status == DataStatus.none;
-  bool get loading => status == DataStatus.loading;
-  bool get loaded => status == DataStatus.loaded;
-  bool get error => status == DataStatus.error;
-}
-
-enum PlayerStatus { stopped, completed, playing, paused }
-
-class VideoPlayerStatus {
-  PlayerStatus status = PlayerStatus.stopped;
-
-  bool get stopped {
-    return status == PlayerStatus.stopped;
-  }
-
-  bool get playing {
-    return status == PlayerStatus.playing;
-  }
-
-  bool get paused {
-    return status == PlayerStatus.paused;
-  }
-
-  bool get completed {
-    return status == PlayerStatus.completed;
   }
 }
