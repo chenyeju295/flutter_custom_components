@@ -19,8 +19,6 @@ class _CCVideoPlayerState extends State<CCVideoPlayer> {
 
   @override
   void dispose() {
-    debugPrint('视频关闭');
-    widget.controller.disposePlayer();
     super.dispose();
   }
 
@@ -42,7 +40,7 @@ class _CCVideoPlayerState extends State<CCVideoPlayer> {
           Positioned.fill(
               child: _.videoPlayerController != null
                   ? VideoPlayer(key: _key, _.videoPlayerController!)
-                  : const SizedBox()),
+                  : const CircularProgressIndicator(strokeWidth: 3)),
           const Positioned.fill(child: PlayerControls())
         ]),
       ),

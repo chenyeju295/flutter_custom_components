@@ -21,7 +21,7 @@ class _PlayerControlsState extends State<PlayerControls> {
     switch (_.dataStatus.status) {
       case DataStatus.none:
       case DataStatus.loading:
-        return const Center(child: CupertinoActivityIndicator(color: Colors.red));
+        return const Center(child: CircularProgressIndicator(strokeWidth: 3));
       case DataStatus.error:
         return const Center(
             child: Column(
@@ -114,6 +114,7 @@ class _PlayerControlsState extends State<PlayerControls> {
                       onTap: () {
                         if (_.fullscreen) {
                           _.onFullscreenClose();
+                          Navigator.of(context).pop();
                         } else {
                           _.setVideoAsAppFullScreen(context);
                         }

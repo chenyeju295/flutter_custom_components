@@ -50,6 +50,14 @@ class CCVideoPlayerController extends ChangeNotifier {
   final VideoPlayerStatus playerStatus = VideoPlayerStatus();
   final PlayerDataStatus dataStatus = PlayerDataStatus();
 
+  @override
+  void dispose() {
+    _videoPlayerController?.removeListener(_listener);
+    _videoPlayerController?.dispose();
+    _videoPlayerController = null;
+    super.dispose();
+  }
+
   ///设置视频源
   Future<void> setDataSource(
     DataSource dataSource, {
@@ -143,12 +151,6 @@ class CCVideoPlayerController extends ChangeNotifier {
     if (_autoPlay) {
       await play();
     }
-  }
-
-  Future<void> disposePlayer() async {
-    _videoPlayerController?.removeListener(_listener);
-    await _videoPlayerController?.dispose();
-    _videoPlayerController = null;
   }
 
   Future<void> setMute(bool enabled) async {
