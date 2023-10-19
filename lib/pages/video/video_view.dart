@@ -40,6 +40,11 @@ class _VideoPageState extends State<VideoPage> {
   }
 
   @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return _buildPage(context);
   }
@@ -56,15 +61,15 @@ class _VideoPageState extends State<VideoPage> {
               CCVideoPlayer(
                 controller: videoControllerList[0],
               ),
-              // CCVideoPlayer(
-              //   controller: videoControllerList[1],
-              // ),
-              // CCVideoPlayer(
-              //   controller: videoControllerList[2],
-              // ),
-              // CCVideoPlayer(
-              //   controller: videoControllerList[3],
-              // ),
+              CCVideoPlayer(
+                controller: videoControllerList[1],
+              ),
+              CCVideoPlayer(
+                controller: videoControllerList[2],
+              ),
+              CCVideoPlayer(
+                controller: videoControllerList[3],
+              ),
             ],
           ),
         ),

@@ -19,7 +19,8 @@ class _CCVideoPlayerState extends State<CCVideoPlayer> {
 
   @override
   void dispose() {
-    widget.controller.dispose();
+    debugPrint('视频关闭');
+    widget.controller.disposePlayer();
     super.dispose();
   }
 
@@ -39,10 +40,9 @@ class _CCVideoPlayerState extends State<CCVideoPlayer> {
         color: Colors.black,
         child: Stack(alignment: Alignment.center, children: [
           Positioned.fill(
-            child: _.videoPlayerController != null
-                ? VideoPlayer(key: _key, _.videoPlayerController!)
-                : GestureDetector(onTap: () => setState(() {}), child: const Center()),
-          ),
+              child: _.videoPlayerController != null
+                  ? VideoPlayer(key: _key, _.videoPlayerController!)
+                  : const SizedBox()),
           const Positioned.fill(child: PlayerControls())
         ]),
       ),

@@ -13,10 +13,9 @@ dependencies:
     sdk: flutter
   provider: ^6.0.5
   video_player: ^2.7.2
-  auto_orientation: ^2.3.1
-  brightness_volume: ^1.0.3
   volume_controller: ^2.0.3
   screen_brightness: ^0.2.0
+  auto_orientation: ^2.3.1
 
   cupertino_icons: ^1.0.2
 
