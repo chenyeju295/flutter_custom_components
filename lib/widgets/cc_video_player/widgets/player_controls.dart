@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_custom_components/widgets/cc_video_player/cc_video_player_controller.dart';
 import 'package:flutter_custom_components/widgets/cc_video_player/model/player_model.dart';
@@ -15,129 +17,162 @@ class _PlayerControlsState extends State<PlayerControls> {
   final textStyle = const TextStyle(color: Colors.white, fontSize: 10);
   late double _maxHeight;
   late double _maxWidth;
+  Timer? _showControlsTimer;
+  bool showControls = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _showControlsTimer?.cancel();
+    super.dispose();
+  }
+
+  // 开启ui
+  void _startTimer() {
+    _showControlsTimer?.cancel();
+    showControls = true;
+    _showControlsTimer = Timer(const Duration(seconds: 3), () {
+      showControls = false;
+      _showControlsTimer?.cancel();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
-      _maxHeight = constraints.maxHeight;
-      _maxWidth = constraints.maxWidth;
-      return Consumer<CCVideoPlayerController>(
-        builder: (context, _, child) {
-          if (_.playerStatus.none) {
-            return Center(
-                child: IconButton(
-                    icon: const Icon(Icons.play_circle, size: 40, color: Colors.white), onPressed: () => _.play()));
-          }
-          return Stack(
-            children: [
-              _buildTopBar(_),
-              _buildVideoStateWidget(_),
-              _buildVolumeControls(_),
-              _buildBrightnessControls(_),
-              if (_.playerStatus.completed)
-                Center(
-                    child: IconButton(icon: const Icon(Icons.replay, color: Colors.white), onPressed: () => _.play())),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  decoration: BoxDecoration(
-                      gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.4),
-                  ])),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => _.togglePlay(),
-                        behavior: HitTestBehavior.opaque,
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Icon(_.playerStatus.playing ? Icons.pause : Icons.play_arrow,
-                              size: 20, color: Colors.white),
-                        ),
-                      ),
-                      Text(
-                        CCVideoPlayerUtils.printDuration(_.duration, _.sliderPosition),
-                        style: textStyle,
-                      ),
-                      Expanded(
-                          child: Container(
-                        padding: const EdgeInsets.only(left: 8, right: 8),
-                        constraints: const BoxConstraints(maxHeight: 30),
-                        alignment: Alignment.center,
-                        child: SliderTheme(
-                          data: const SliderThemeData(
-                            trackShape: CustomTrackShape(),
-                            thumbColor: Colors.redAccent,
-                            activeTrackColor: Colors.redAccent,
-                            thumbShape: RoundSliderThumbShape(enabledThumbRadius: 4.0),
-                          ),
-                          child: Slider(
-                            min: 0,
-                            divisions: null,
-                            value: _.sliderPosition.inMilliseconds.toDouble(),
-                            max: _.duration.inMilliseconds.toDouble(),
-                            onChanged: (double value) {
-                              _.seekTo(Duration(milliseconds: value.toInt()));
-                            },
-                          ),
-                        ),
-                      )),
-                      Text(
-                        CCVideoPlayerUtils.printDuration(_.duration, _.duration),
-                        style: textStyle,
-                      ),
-                      if (_.quality != null)
+    return GestureDetector(
+      onTap: _startTimer,
+      behavior: HitTestBehavior.opaque,
+      child: LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
+        _maxHeight = constraints.maxHeight;
+        _maxWidth = constraints.maxWidth;
+        return Consumer<CCVideoPlayerController>(
+          builder: (context, _, child) {
+            if (!showControls) return const Center();
+            if (_.playerStatus.none) {
+              return _.dataStatus.loaded
+                  ? Center(
+                      child: IconButton(
+                          icon: const Icon(Icons.play_circle, size: 40, color: Colors.white),
+                          onPressed: () => _.play()))
+                  : const SizedBox();
+            }
+            return Stack(
+              children: [
+                _buildTopBar(_),
+                _buildVideoStateWidget(_),
+                _buildVolumeControls(_),
+                _buildBrightnessControls(_),
+                if (_.playerStatus.completed)
+                  Center(
+                      child:
+                          IconButton(icon: const Icon(Icons.replay, color: Colors.white), onPressed: () => _.play())),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    decoration: BoxDecoration(
+                        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.4),
+                    ])),
+                    child: Row(
+                      children: [
                         GestureDetector(
-                            onTap: () => _.onChangeVideoQuality(context),
-                            behavior: HitTestBehavior.opaque,
-                            child: Padding(
-                              padding: const EdgeInsets.all(4.0),
-                              child: Text(
-                                _.quality?.label ?? '',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.white,
+                          onTap: () => _.togglePlay(),
+                          behavior: HitTestBehavior.opaque,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Icon(_.playerStatus.playing ? Icons.pause : Icons.play_arrow,
+                                size: 20, color: Colors.white),
+                          ),
+                        ),
+                        Text(
+                          CCVideoPlayerUtils.printDuration(_.duration, _.sliderPosition),
+                          style: textStyle,
+                        ),
+                        Expanded(
+                            child: Container(
+                          padding: const EdgeInsets.only(left: 8, right: 8),
+                          constraints: const BoxConstraints(maxHeight: 30),
+                          alignment: Alignment.center,
+                          child: SliderTheme(
+                            data: const SliderThemeData(
+                              trackShape: CustomTrackShape(),
+                              thumbColor: Colors.redAccent,
+                              activeTrackColor: Colors.redAccent,
+                              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 4.0),
+                            ),
+                            child: Slider(
+                              min: 0,
+                              divisions: null,
+                              value: _.sliderPosition.inMilliseconds.toDouble(),
+                              max: _.duration.inMilliseconds.toDouble(),
+                              onChanged: (double value) {
+                                _.seekTo(Duration(milliseconds: value.toInt()));
+                              },
+                            ),
+                          ),
+                        )),
+                        Text(
+                          CCVideoPlayerUtils.printDuration(_.duration, _.duration),
+                          style: textStyle,
+                        ),
+                        if (_.quality != null)
+                          GestureDetector(
+                              onTap: () => _.onChangeVideoQuality(context),
+                              behavior: HitTestBehavior.opaque,
+                              child: Padding(
+                                padding: const EdgeInsets.all(4.0),
+                                child: Text(
+                                  _.quality?.label ?? '',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ),
-                            )),
-                      GestureDetector(
-                        onTap: () {
-                          _.setMute(!_.mute);
-                        },
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          padding: const EdgeInsets.all(5.0),
-                          child: Icon(_.mute ? Icons.volume_off_outlined : Icons.volume_up_outlined,
-                              size: 18, color: Colors.white),
+                              )),
+                        GestureDetector(
+                          onTap: () {
+                            _.setMute(!_.mute);
+                          },
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            padding: const EdgeInsets.all(5.0),
+                            child: Icon(_.mute ? Icons.volume_off_outlined : Icons.volume_up_outlined,
+                                size: 18, color: Colors.white),
+                          ),
                         ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          if (_.fullscreen) {
-                            Navigator.maybePop(context);
-                          } else {
-                            _.setVideoAsAppFullScreen(context);
-                          }
-                        },
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          padding: const EdgeInsets.all(5.0),
-                          child: Icon(!_.fullscreen ? Icons.fullscreen : Icons.fullscreen_exit,
-                              size: 20, color: Colors.white),
-                        ),
-                      )
-                    ],
+                        GestureDetector(
+                          onTap: () {
+                            if (_.fullscreen) {
+                              Navigator.maybePop(context);
+                            } else {
+                              _.setVideoAsAppFullScreen(context);
+                            }
+                          },
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            padding: const EdgeInsets.all(5.0),
+                            child: Icon(!_.fullscreen ? Icons.fullscreen : Icons.fullscreen_exit,
+                                size: 20, color: Colors.white),
+                          ),
+                        )
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
-      );
-    });
+              ],
+            );
+          },
+        );
+      }),
+    );
   }
 
   _buildVideoStateWidget(CCVideoPlayerController _) {
