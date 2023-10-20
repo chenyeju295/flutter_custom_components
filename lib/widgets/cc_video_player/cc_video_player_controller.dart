@@ -55,6 +55,12 @@ class CCVideoPlayerController extends ChangeNotifier {
   final VideoPlayerStatus playerStatus = VideoPlayerStatus();
   final PlayerDataStatus dataStatus = PlayerDataStatus();
 
+  CCVideoPlayerController() {
+    VolumeController().listener((newVolume) {
+      _currentVolume = newVolume;
+    });
+  }
+
   @override
   void dispose() {
     // 释放资源
@@ -237,6 +243,7 @@ class CCVideoPlayerController extends ChangeNotifier {
       seekPosition = Duration.zero;
     }
     _position = seekPosition;
+    _sliderPosition = seekPosition;
     if (_duration.inSeconds != 0) {
       await _videoPlayerController?.seekTo(seekPosition);
     }
@@ -259,11 +266,13 @@ class CCVideoPlayerController extends ChangeNotifier {
   }
 
   Future<void> setBrightness(double brightness) async {
-    try {
-      _currentBrightness = brightness;
-      ScreenBrightness().setScreenBrightness(brightness);
-    } catch (e) {
-      debugPrint(e.toString());
+    if (brightness >= 0.0 && brightness <= 1.0) {
+      try {
+        _currentBrightness = brightness;
+        ScreenBrightness().setScreenBrightness(brightness);
+      } catch (e) {
+        debugPrint(e.toString());
+      }
     }
   }
 
