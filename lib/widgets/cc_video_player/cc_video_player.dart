@@ -16,12 +16,6 @@ class CCVideoPlayer extends StatefulWidget {
 
 class _CCVideoPlayerState extends State<CCVideoPlayer> {
   final ValueKey _key = const ValueKey(true);
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
@@ -31,19 +25,24 @@ class _CCVideoPlayerState extends State<CCVideoPlayer> {
   }
 
   Widget _buildPage(BuildContext context) {
-    final _ = context.read<CCVideoPlayerController>();
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: Container(
-        color: Colors.black,
-        child: Stack(alignment: Alignment.center, children: [
-          Positioned.fill(
-              child: _.videoPlayerController != null
-                  ? VideoPlayer(key: _key, _.videoPlayerController!)
-                  : const CircularProgressIndicator(strokeWidth: 3)),
-          const Positioned.fill(child: PlayerControls())
-        ]),
-      ),
+    return Selector<CCVideoPlayerController, VideoPlayerController?>(
+      selector: (context, provider) => provider.videoPlayerController,
+      builder: (context, videoPlayerController, child) {
+        return AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Container(
+            color: Colors.black,
+            child: Stack(alignment: Alignment.center, children: [
+              Positioned.fill(
+                  child: videoPlayerController != null
+                      ? VideoPlayer(key: _key, videoPlayerController)
+                      : const Center(child: CircularProgressIndicator(strokeWidth: 3))),
+              child ?? Container()
+            ]),
+          ),
+        );
+      },
+      child: const Positioned.fill(child: PlayerControls()),
     );
   }
 }

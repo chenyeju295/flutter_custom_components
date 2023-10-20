@@ -49,19 +49,8 @@ enum PlayerStatus { none, completed, playing, paused }
 class VideoPlayerStatus {
   PlayerStatus status = PlayerStatus.none;
 
-  bool get none {
-    return status == PlayerStatus.none;
-  }
-
-  bool get playing {
-    return status == PlayerStatus.playing;
-  }
-
-  bool get paused {
-    return status == PlayerStatus.paused;
-  }
-
-  bool get completed {
-    return status == PlayerStatus.completed;
-  }
+  bool get none => status == PlayerStatus.none;
+  bool get playing => status == PlayerStatus.playing;
+  bool get paused => status == PlayerStatus.paused;
+  bool get completed => status == PlayerStatus.completed;
 }

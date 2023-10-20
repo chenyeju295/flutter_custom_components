@@ -25,13 +25,14 @@ class _CCVideoPlayerFullscreenPageState extends State<CCVideoPlayerFullscreenPag
         body: Center(
           child: AspectRatio(
             aspectRatio: widget.controller.videoPlayerController!.value.aspectRatio,
-            child: Stack(
-              children: [
-                VideoPlayer(
-                  widget.controller.videoPlayerController!,
-                ),
-                const Positioned.fill(child: PlayerControls())
-              ],
+            child: Selector<CCVideoPlayerController, VideoPlayerController?>(
+              selector: (context, provider) => provider.videoPlayerController,
+              builder: (context, value, child) {
+                return Stack(
+                  children: [VideoPlayer(widget.controller.videoPlayerController!), child ?? Container()],
+                );
+              },
+              child: const Positioned.fill(child: PlayerControls()),
             ),
           ),
         ),

@@ -1,19 +1,20 @@
 import 'dart:io';
 
 import 'package:auto_orientation/auto_orientation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_custom_components/widgets/cc_video_player/model/player_model.dart';
+import 'package:flutter_custom_components/widgets/cc_video_player/model/quality.dart';
+import 'package:flutter_custom_components/widgets/cc_video_player/utils/m3u8_utils.dart';
 import 'package:flutter_custom_components/widgets/cc_video_player/widgets/fullscreen_page.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:video_player/video_player.dart';
-
-import 'package:flutter/widgets.dart';
 import 'package:volume_controller/volume_controller.dart';
 
 class CCVideoPlayerController extends ChangeNotifier {
   VideoPlayerController? _videoPlayerController;
   Duration _position = Duration.zero;
+  Duration _currentPosition = Duration.zero;
   Duration _sliderPosition = Duration.zero;
   Duration _duration = Duration.zero;
   bool _autoPlay = false;
@@ -24,9 +25,13 @@ class CCVideoPlayerController extends ChangeNotifier {
   double _playbackSpeed = 1.0;
   double _currentVolume = 1.0;
   double _currentBrightness = 1.0;
+  Quality? _quality;
+  List<Quality> _qualities = [];
 
+  List<Quality> get qualities => _qualities;
+  Quality? get quality => _quality;
   Duration get position => _position;
-
+  Duration get currentPosition => _currentPosition;
   Duration get sliderPosition => _sliderPosition;
 
   Duration get duration => _duration;
@@ -52,10 +57,29 @@ class CCVideoPlayerController extends ChangeNotifier {
 
   @override
   void dispose() {
+    // 释放资源
     _videoPlayerController?.removeListener(_listener);
     _videoPlayerController?.dispose();
     _videoPlayerController = null;
     super.dispose();
+  }
+
+  ///初始化视频信息
+  Future<void> initializeVideo(
+    DataSource dataSource, {
+    bool autoplay = false,
+    bool looping = false,
+    Duration seekTo = Duration.zero,
+  }) async {
+    if (dataSource.source?.endsWith('.m3u8') == true) {
+      _qualities = await M3u8Utils.getStreamUrls(dataSource.source!);
+      if (_qualities.isEmpty) {
+        throw Exception("视频资源有误！");
+      }
+      _setQuality(_qualities[0], autoplay: autoplay);
+      return;
+    }
+    await setDataSource(dataSource, autoplay: autoplay, looping: looping, seekTo: seekTo);
   }
 
   ///设置视频源
@@ -73,15 +97,16 @@ class CCVideoPlayerController extends ChangeNotifier {
         await pause();
       }
       VideoPlayerController? oldController = _videoPlayerController;
+
+      _videoPlayerController = _createVideoController(dataSource);
+      await _videoPlayerController!.initialize();
+
       if (oldController != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           oldController.removeListener(_listener);
           await oldController.dispose();
         });
       }
-
-      _videoPlayerController = _createVideoController(dataSource);
-      await _videoPlayerController!.initialize();
       _duration = _videoPlayerController!.value.duration;
       dataStatus.status = DataStatus.loaded;
       await _initializePlayer(seekTo: seekTo);
@@ -123,10 +148,7 @@ class CCVideoPlayerController extends ChangeNotifier {
     _duration = value.duration;
     _position = value.position;
     _sliderPosition = value.position;
-    final volume = value.volume;
-    if (!mute && _volumeBeforeMute != volume) {
-      _volumeBeforeMute = volume;
-    }
+    _currentPosition = value.position;
     if ((_position.inSeconds >= _duration.inSeconds) && !playerStatus.completed) {
       playerStatus.status = PlayerStatus.completed;
     }
@@ -164,15 +186,16 @@ class CCVideoPlayerController extends ChangeNotifier {
   Future<void> setVolume(double volumeNew, {bool videoPlayerVolume = false}) async {
     if (volumeNew >= 0.0 && volumeNew <= 1.0) {
       _currentVolume = volumeNew;
-
-      try {
-        VolumeController().setVolume(volumeNew, showSystemUI: false);
-      } catch (_) {
-        debugPrint(_.toString());
+      if (videoPlayerVolume) {
+        await _videoPlayerController?.setVolume(volumeNew);
+      } else {
+        try {
+          VolumeController().setVolume(volumeNew, showSystemUI: false);
+        } catch (_) {
+          debugPrint(_.toString());
+        }
       }
     }
-
-    //
   }
 
   Future<void> setPlaybackSpeed(double speed) async {
@@ -260,13 +283,6 @@ class CCVideoPlayerController extends ChangeNotifier {
     }
   }
 
-  Future<void> videoPlayerClosed() async {
-    _position = Duration.zero;
-    _videoPlayerController?.removeListener(_listener);
-    await _videoPlayerController?.dispose();
-    _videoPlayerController = null;
-  }
-
   Future<void> setFullScreenOrNot(bool full) async {
     if (full) {
       AutoOrientation.landscapeAutoMode();
@@ -281,7 +297,6 @@ class CCVideoPlayerController extends ChangeNotifier {
       }
     }
     _fullscreen = full;
-    notifyListeners();
   }
 
   Future<void> onFullscreenClose() async {
@@ -291,5 +306,50 @@ class CCVideoPlayerController extends ChangeNotifier {
       debugPrint(e.toString());
     }
     setFullScreenOrNot(false);
+  }
+
+  void onChangeVideoQuality(BuildContext context) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (_) => CupertinoActionSheet(
+        actions: List.generate(
+          _qualities.length,
+          (index) {
+            final quality = _qualities[index];
+            return CupertinoActionSheetAction(
+              child: Text(
+                quality.label,
+                style: const TextStyle(fontSize: 18),
+              ),
+              onPressed: () {
+                _setQuality(quality);
+                Navigator.maybePop(_);
+              },
+            );
+          },
+        ),
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.maybePop(_),
+          isDestructiveAction: true,
+          child: const Text("Cancel"),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setQuality(Quality? quality, {bool autoplay = true}) async {
+    if (quality != null && _quality?.label != quality.label) {
+      _quality = quality;
+      await setDataSource(
+        DataSource(
+          type: DataSourceType.file,
+          source: _quality?.isFile == true ? null : _quality?.url,
+          file: _quality?.isFile == true ? _quality?.file : null,
+          httpHeaders: _quality?.httpHeaders,
+        ),
+        autoplay: autoplay,
+        seekTo: _currentPosition,
+      );
+    }
   }
 }
