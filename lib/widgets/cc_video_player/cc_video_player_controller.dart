@@ -1,8 +1,4 @@
-import 'dart:io';
-
-import 'package:auto_orientation/auto_orientation.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_custom_components/widgets/cc_video_player/model/player_model.dart';
 import 'package:flutter_custom_components/widgets/cc_video_player/model/quality.dart';
 import 'package:flutter_custom_components/widgets/cc_video_player/utils/m3u8_utils.dart';
@@ -20,16 +16,15 @@ class CCVideoPlayerController extends ChangeNotifier {
   bool _autoPlay = false;
   bool _looping = false;
   bool _mute = false;
-  bool _fullscreen = false;
   double _volumeBeforeMute = 0;
   double _playbackSpeed = 1.0;
   double _currentVolume = 1.0;
   double _currentBrightness = 1.0;
   Quality? _quality;
   List<Quality> _qualities = [];
-
   List<Quality> get qualities => _qualities;
   Quality? get quality => _quality;
+  String get errorText => _errorText;
   Duration get position => _position;
   Duration get currentPosition => _currentPosition;
   Duration get sliderPosition => _sliderPosition;
@@ -37,8 +32,6 @@ class CCVideoPlayerController extends ChangeNotifier {
   Duration get duration => _duration;
 
   bool get mute => _mute;
-
-  bool get fullscreen => _fullscreen;
 
   double get currentBrightness => _currentBrightness;
 
@@ -54,6 +47,8 @@ class CCVideoPlayerController extends ChangeNotifier {
 
   final VideoPlayerStatus playerStatus = VideoPlayerStatus();
   final PlayerDataStatus dataStatus = PlayerDataStatus();
+  bool fullscreen = false;
+  String _errorText = '';
 
   CCVideoPlayerController() {
     VolumeController().listener((newVolume) {
@@ -80,12 +75,13 @@ class CCVideoPlayerController extends ChangeNotifier {
     if (dataSource.source?.endsWith('.m3u8') == true) {
       _qualities = await M3u8Utils.getStreamUrls(dataSource.source!);
       if (_qualities.isEmpty) {
+        _errorText = '视频资源有误';
         throw Exception("视频资源有误！");
       }
-      _setQuality(_qualities[0], autoplay: autoplay);
-      return;
+      setQuality(_qualities[0], autoplay: autoplay);
+    } else {
+      await setDataSource(dataSource, autoplay: autoplay, looping: looping, seekTo: seekTo);
     }
-    await setDataSource(dataSource, autoplay: autoplay, looping: looping, seekTo: seekTo);
   }
 
   ///设置视频源
@@ -117,11 +113,12 @@ class CCVideoPlayerController extends ChangeNotifier {
       dataStatus.status = DataStatus.loaded;
       await _initializePlayer(seekTo: seekTo);
       _videoPlayerController!.addListener(_listener);
+      notifyListeners();
     } catch (e) {
       dataStatus.status = DataStatus.error;
-      debugPrint(e.toString());
+      _errorText = '视频加载错误：${_videoPlayerController!.value.errorDescription ?? e}';
+      debugPrint('错误：$e');
     }
-    notifyListeners();
   }
 
   VideoPlayerController _createVideoController(DataSource dataSource) {
@@ -150,12 +147,13 @@ class CCVideoPlayerController extends ChangeNotifier {
       return;
     }
     final value = _videoPlayerController!.value;
-    playerStatus.status = value.isPlaying ? PlayerStatus.playing : PlayerStatus.paused;
     _duration = value.duration;
     _position = value.position;
     _sliderPosition = value.position;
     _currentPosition = value.position;
-    if ((_position.inSeconds >= _duration.inSeconds) && !playerStatus.completed) {
+    playerStatus.status = value.isPlaying ? PlayerStatus.playing : PlayerStatus.paused;
+    _errorText = value.errorDescription ?? '';
+    if (value.isCompleted) {
       playerStatus.status = PlayerStatus.completed;
     }
     notifyListeners();
@@ -214,16 +212,14 @@ class CCVideoPlayerController extends ChangeNotifier {
     _looping = looping;
   }
 
-  Future<void> play({bool repeat = false, bool hideControls = true}) async {
-    if (repeat) {
-      await seekTo(Duration.zero);
-    }
+  Future<void> play({bool hideControls = true}) async {
     await _videoPlayerController?.play();
     await getCurrentVolume();
     await getCurrentBrightness();
   }
 
-  Future<void> pause({bool notify = true}) async {
+  Future<void> pause() async {
+    playerStatus.status = PlayerStatus.paused;
     await _videoPlayerController?.pause();
   }
 
@@ -249,7 +245,7 @@ class CCVideoPlayerController extends ChangeNotifier {
     }
   }
 
-  Future<void> setVideoAsAppFullScreen(BuildContext context,
+  Future<void> setVideoFullScreen(BuildContext context,
       {bool applyOverlaysAndOrientations = true, bool disposePlayer = false}) async {
     final route = PageRouteBuilder(
       opaque: false,
@@ -261,7 +257,6 @@ class CCVideoPlayerController extends ChangeNotifier {
         );
       },
     );
-    setFullScreenOrNot(true);
     await Navigator.of(context).push(route);
   }
 
@@ -292,31 +287,6 @@ class CCVideoPlayerController extends ChangeNotifier {
     }
   }
 
-  Future<void> setFullScreenOrNot(bool full) async {
-    if (full) {
-      AutoOrientation.landscapeAutoMode();
-      if (Platform.isAndroid) {
-        await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
-      }
-    } else {
-      AutoOrientation.portraitAutoMode();
-      if (Platform.isAndroid) {
-        await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
-            overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom]);
-      }
-    }
-    _fullscreen = full;
-  }
-
-  Future<void> onFullscreenClose() async {
-    try {
-      await ScreenBrightness().resetScreenBrightness();
-    } catch (e) {
-      debugPrint(e.toString());
-    }
-    setFullScreenOrNot(false);
-  }
-
   void onChangeVideoQuality(BuildContext context) {
     showCupertinoModalPopup(
       context: context,
@@ -331,7 +301,6 @@ class CCVideoPlayerController extends ChangeNotifier {
                 style: const TextStyle(fontSize: 18),
               ),
               onPressed: () {
-                _setQuality(quality);
                 Navigator.maybePop(_);
               },
             );
@@ -346,7 +315,7 @@ class CCVideoPlayerController extends ChangeNotifier {
     );
   }
 
-  Future<void> _setQuality(Quality? quality, {bool autoplay = true}) async {
+  Future<void> setQuality(Quality? quality, {bool autoplay = true}) async {
     if (quality != null && _quality?.label != quality.label) {
       _quality = quality;
       await setDataSource(

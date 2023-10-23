@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_custom_components/widgets/cc_video_player/cc_video_player_controller.dart';
 import 'package:flutter_custom_components/widgets/cc_video_player/model/player_model.dart';
+import 'package:flutter_custom_components/widgets/cc_video_player/model/quality.dart';
 import 'package:flutter_custom_components/widgets/cc_video_player/utils/utils.dart';
 import 'package:provider/provider.dart';
 
@@ -14,12 +15,12 @@ class PlayerControls extends StatefulWidget {
 }
 
 class _PlayerControlsState extends State<PlayerControls> {
-  final textStyle = const TextStyle(color: Colors.white, fontSize: 10);
+  final textStyle = const TextStyle(color: Colors.white, fontSize: 12);
   late double _maxHeight;
   late double _maxWidth;
   Timer? _showControlsTimer;
   bool showControls = true;
-
+  double bottomTextSize = 12;
   @override
   void initState() {
     super.initState();
@@ -51,122 +52,15 @@ class _PlayerControlsState extends State<PlayerControls> {
         _maxHeight = constraints.maxHeight;
         _maxWidth = constraints.maxWidth;
         return Consumer<CCVideoPlayerController>(
-          builder: (context, _, child) {
-            if (!showControls) return const Center();
-            if (_.playerStatus.none) {
-              return _.dataStatus.loaded
-                  ? Center(
-                      child: IconButton(
-                          icon: const Icon(Icons.play_circle, size: 40, color: Colors.white),
-                          onPressed: () => _.play()))
-                  : const SizedBox();
-            }
+          builder: (context, controller, child) {
+            if (!showControls && controller.playerStatus.playing) return const Center();
             return Stack(
               children: [
-                _buildTopBar(_),
-                _buildVideoStateWidget(_),
-                _buildVolumeControls(_),
-                _buildBrightnessControls(_),
-                if (_.playerStatus.completed)
-                  Center(
-                      child:
-                          IconButton(icon: const Icon(Icons.replay, color: Colors.white), onPressed: () => _.play())),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.4),
-                    ])),
-                    child: Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => _.togglePlay(),
-                          behavior: HitTestBehavior.opaque,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Icon(_.playerStatus.playing ? Icons.pause : Icons.play_arrow,
-                                size: 20, color: Colors.white),
-                          ),
-                        ),
-                        Text(
-                          CCVideoPlayerUtils.printDuration(_.duration, _.sliderPosition),
-                          style: textStyle,
-                        ),
-                        Expanded(
-                            child: Container(
-                          padding: const EdgeInsets.only(left: 8, right: 8),
-                          constraints: const BoxConstraints(maxHeight: 30),
-                          alignment: Alignment.center,
-                          child: SliderTheme(
-                            data: const SliderThemeData(
-                              trackShape: CustomTrackShape(),
-                              thumbColor: Colors.redAccent,
-                              activeTrackColor: Colors.redAccent,
-                              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 4.0),
-                            ),
-                            child: Slider(
-                              min: 0,
-                              divisions: null,
-                              value: _.sliderPosition.inMilliseconds.toDouble(),
-                              max: _.duration.inMilliseconds.toDouble(),
-                              onChanged: (double value) {
-                                _.seekTo(Duration(milliseconds: value.toInt()));
-                              },
-                            ),
-                          ),
-                        )),
-                        Text(
-                          CCVideoPlayerUtils.printDuration(_.duration, _.duration),
-                          style: textStyle,
-                        ),
-                        if (_.quality != null)
-                          GestureDetector(
-                              onTap: () => _.onChangeVideoQuality(context),
-                              behavior: HitTestBehavior.opaque,
-                              child: Padding(
-                                padding: const EdgeInsets.all(4.0),
-                                child: Text(
-                                  _.quality?.label ?? '',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              )),
-                        GestureDetector(
-                          onTap: () {
-                            _.setMute(!_.mute);
-                          },
-                          behavior: HitTestBehavior.opaque,
-                          child: Container(
-                            padding: const EdgeInsets.all(5.0),
-                            child: Icon(_.mute ? Icons.volume_off_outlined : Icons.volume_up_outlined,
-                                size: 18, color: Colors.white),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            if (_.fullscreen) {
-                              Navigator.maybePop(context);
-                            } else {
-                              _.setVideoAsAppFullScreen(context);
-                            }
-                          },
-                          behavior: HitTestBehavior.opaque,
-                          child: Container(
-                            padding: const EdgeInsets.all(5.0),
-                            child: Icon(!_.fullscreen ? Icons.fullscreen : Icons.fullscreen_exit,
-                                size: 20, color: Colors.white),
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                ),
+                buildTopBar(controller),
+                buildCenterStateWidget(controller),
+                buildVolumeControls(controller),
+                buildBrightnessControls(controller),
+                buildBottomControls(controller),
               ],
             );
           },
@@ -175,27 +69,53 @@ class _PlayerControlsState extends State<PlayerControls> {
     );
   }
 
-  _buildVideoStateWidget(CCVideoPlayerController _) {
-    switch (_.dataStatus.status) {
-      case DataStatus.none:
-      case DataStatus.loading:
-        return const Center(child: CircularProgressIndicator(strokeWidth: 3));
-      case DataStatus.error:
-        return const Center(
-            child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error, size: 24, color: Colors.white),
-            SizedBox(height: 4),
-            Text('视频资源错误', style: TextStyle(color: Colors.white, fontSize: 10))
-          ],
-        ));
-      case DataStatus.loaded:
-        return const SizedBox();
-    }
+  buildControlsButton(IconData icon, {double iconSize = 20, VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: () {
+        _startTimer();
+        onTap?.call();
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(5.0),
+        child: Icon(icon, size: iconSize, color: Colors.white),
+      ),
+    );
   }
 
-  _buildTopBar(CCVideoPlayerController _) {
+  buildCenterStateWidget(CCVideoPlayerController controller) {
+    Widget child = const SizedBox();
+    switch (controller.dataStatus.status) {
+      case DataStatus.none:
+      case DataStatus.loading:
+        child = const CircularProgressIndicator(strokeWidth: 3, color: Colors.red);
+      case DataStatus.error:
+        child = Text(controller.errorText, style: textStyle);
+      case DataStatus.loaded:
+        switch (controller.playerStatus.status) {
+          case PlayerStatus.paused:
+            child = buildControlsButton(Icons.play_circle, iconSize: 40, onTap: () => controller.play());
+          case PlayerStatus.error:
+            child = Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error, size: 24, color: Colors.white),
+                const SizedBox(height: 4),
+                Text(controller.errorText, style: textStyle)
+              ],
+            );
+          case PlayerStatus.completed:
+            child = buildControlsButton(Icons.replay, iconSize: 30, onTap: () => controller.play());
+          default:
+            break;
+        }
+      default:
+        break;
+    }
+    return Center(child: child);
+  }
+
+  buildTopBar(CCVideoPlayerController controller) {
     return Positioned(
       left: 0,
       right: 0,
@@ -215,11 +135,11 @@ class _PlayerControlsState extends State<PlayerControls> {
                   padding: EdgeInsets.all(8.0),
                   child: Icon(Icons.arrow_back_ios_new, size: 14, color: Colors.white),
                 )),
-            // Expanded(
-            //     child: Text(_.videoPlayerController?.dataSource.toString() ?? '',
-            //         style: const TextStyle(color: Colors.white, fontSize: 14),
-            //         maxLines: 1,
-            //         overflow: TextOverflow.ellipsis)),
+            Expanded(
+                child: Text(controller.errorText,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis)),
             // GestureDetector(
             //     onTap: () {},
             //     child: const Padding(
@@ -230,7 +150,7 @@ class _PlayerControlsState extends State<PlayerControls> {
     );
   }
 
-  _buildVolumeControls(CCVideoPlayerController _) {
+  buildVolumeControls(CCVideoPlayerController _) {
     return Positioned(
         right: 0,
         bottom: 0,
@@ -246,20 +166,154 @@ class _PlayerControlsState extends State<PlayerControls> {
         ));
   }
 
-  _buildBrightnessControls(CCVideoPlayerController _) {
+  buildBrightnessControls(CCVideoPlayerController controller) {
     return Positioned(
         left: 0,
         bottom: 0,
         top: 0,
         child: GestureDetector(
           onVerticalDragUpdate: (details) {
-            _.setBrightness((-details.delta.dy / _maxHeight + _.currentBrightness));
+            controller.setBrightness((-details.delta.dy / _maxHeight + controller.currentBrightness));
           },
           child: SizedBox(
             width: _maxWidth * 0.3,
             child: Center(child: Text('', style: textStyle)),
           ),
         ));
+  }
+
+  buildPlaybackSpeedPopupMenuButton(CCVideoPlayerController controller) {
+    return PopupMenuButton<double>(
+      initialValue: controller.playbackSpeed,
+      tooltip: '播放速度',
+      onSelected: (double speed) {
+        controller.setPlaybackSpeed(speed);
+      },
+      shadowColor: Colors.transparent,
+      color: Colors.black.withOpacity(.5),
+      padding: EdgeInsets.zero,
+      itemBuilder: (BuildContext context) {
+        return <PopupMenuItem<double>>[
+          for (final double speed in CCVideoPlayerUtils.examplePlaybackRates)
+            PopupMenuItem<double>(
+              height: 20,
+              padding: EdgeInsets.zero,
+              value: speed,
+              child: Center(
+                child: Text(
+                  '${speed}x',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            )
+        ];
+      },
+      child: Padding(
+          padding: const EdgeInsets.all(4.0), child: Text('${controller.playbackSpeed.toString()}x', style: textStyle)),
+    );
+  }
+
+  buildQualityPopupMenuButton(CCVideoPlayerController controller) {
+    if (controller.qualities.isEmpty) return const SizedBox();
+    return PopupMenuButton<Quality>(
+      initialValue: controller.quality,
+      tooltip: '清晰度选择',
+      onSelected: (quality) {
+        quality != controller.quality;
+        controller.setQuality(quality);
+      },
+      shadowColor: Colors.transparent,
+      color: Colors.black.withOpacity(.5),
+      padding: EdgeInsets.zero,
+      itemBuilder: (BuildContext context) {
+        return <PopupMenuItem<Quality>>[
+          ...controller.qualities.map((e) => PopupMenuItem<Quality>(
+                height: 20,
+                padding: EdgeInsets.zero,
+                value: e,
+                child: Center(
+                  child: Text(
+                    e.label,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ))
+        ];
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Text(controller.quality?.label ?? '', style: textStyle),
+      ),
+    );
+  }
+
+  buildBottomControls(CCVideoPlayerController controller) {
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: Container(
+        decoration: BoxDecoration(
+            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [
+          Colors.transparent,
+          Colors.black.withOpacity(0.4),
+        ])),
+        child: Row(
+          children: [
+            buildControlsButton(controller.playerStatus.playing ? Icons.pause : Icons.play_arrow,
+                iconSize: 22, onTap: () => controller.togglePlay()),
+            Text(
+              CCVideoPlayerUtils.printDuration(controller.duration, controller.sliderPosition),
+              style: textStyle,
+            ),
+            Expanded(
+                child: Container(
+              padding: const EdgeInsets.only(left: 8, right: 8),
+              constraints: const BoxConstraints(maxHeight: 30),
+              alignment: Alignment.center,
+              child: SliderTheme(
+                data: const SliderThemeData(
+                  trackShape: CustomTrackShape(),
+                  thumbColor: Colors.redAccent,
+                  activeTrackColor: Colors.redAccent,
+                  thumbShape: RoundSliderThumbShape(enabledThumbRadius: 4.0),
+                ),
+                child: Slider(
+                  min: 0,
+                  divisions: null,
+                  value: controller.sliderPosition.inMilliseconds.toDouble(),
+                  max: controller.duration.inMilliseconds.toDouble(),
+                  onChanged: (double value) {
+                    controller.seekTo(Duration(milliseconds: value.toInt()));
+                  },
+                ),
+              ),
+            )),
+            Text(
+              CCVideoPlayerUtils.printDuration(controller.duration, controller.duration),
+              style: textStyle,
+            ),
+            buildQualityPopupMenuButton(controller),
+            buildPlaybackSpeedPopupMenuButton(controller),
+            buildControlsButton(controller.mute ? Icons.volume_off_outlined : Icons.volume_up_outlined,
+                onTap: () => controller.setMute(!controller.mute)),
+            buildControlsButton(!controller.fullscreen ? Icons.fullscreen : Icons.fullscreen_exit, onTap: () {
+              if (controller.fullscreen) {
+                Navigator.maybePop(context);
+              } else {
+                controller.setVideoFullScreen(context);
+              }
+            })
+          ],
+        ),
+      ),
+    );
   }
 }
 

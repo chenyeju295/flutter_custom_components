@@ -10,15 +10,13 @@ class MainPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (BuildContext context) => MainProvider(),
-      builder: (context, child) => _buildPage(context),
-    );
+        create: (BuildContext context) => MainProvider(), builder: (context, child) => _buildPage(context));
   }
 
   Widget _buildPage(BuildContext context) {
-    final provider = context.read<MainProvider>();
+    // final provider = context.read<MainProvider>();
     return Scaffold(
-        appBar: AppBar(centerTitle: true, title: Text('Flutter Custom Components')),
+        appBar: AppBar(centerTitle: true, title: const Text('Flutter Custom Components')),
         backgroundColor: Colors.white,
         body: Align(
           alignment: Alignment.topCenter,

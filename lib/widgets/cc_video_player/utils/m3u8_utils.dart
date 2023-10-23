@@ -149,10 +149,11 @@ class M3u8Utils {
       ));
     }
     qualities.add(Quality(
-      label: "Auto",
+      label: "自动",
       url: m3u8,
       httpHeaders: httpHeaders,
     ));
+    qualities.removeWhere((element) => element.label == 'null');
     return qualities;
   }
 }

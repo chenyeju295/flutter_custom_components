@@ -44,13 +44,13 @@ class PlayerDataStatus {
   bool get error => status == DataStatus.error;
 }
 
-enum PlayerStatus { none, completed, playing, paused }
+enum PlayerStatus { completed, playing, paused, error }
 
 class VideoPlayerStatus {
-  PlayerStatus status = PlayerStatus.none;
+  PlayerStatus status = PlayerStatus.paused;
 
-  bool get none => status == PlayerStatus.none;
   bool get playing => status == PlayerStatus.playing;
   bool get paused => status == PlayerStatus.paused;
   bool get completed => status == PlayerStatus.completed;
+  bool get error => status == PlayerStatus.error;
 }

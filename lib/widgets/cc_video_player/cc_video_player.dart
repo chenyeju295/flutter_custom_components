@@ -36,7 +36,7 @@ class _CCVideoPlayerState extends State<CCVideoPlayer> {
               Positioned.fill(
                   child: videoPlayerController != null
                       ? VideoPlayer(key: _key, videoPlayerController)
-                      : const Center(child: CircularProgressIndicator(strokeWidth: 3))),
+                      : const Center(child: CircularProgressIndicator(strokeWidth: 3, color: Colors.green))),
               child ?? Container()
             ]),
           ),
