@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_custom_components/pages/linkage_list/linkage_list_view.dart';
 import 'package:flutter_custom_components/pages/video/video_view.dart';
 import 'package:provider/provider.dart';
 
@@ -29,11 +30,11 @@ class MainPage extends StatelessWidget {
                 ),
               );
             }),
-            _buildTextButton('CCVideoPlayer', () {
+            _buildTextButton('LinkageList', () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (BuildContext context) => const VideoPage(),
+                  builder: (BuildContext context) => const LinkageListPage(),
                 ),
               );
             }),
